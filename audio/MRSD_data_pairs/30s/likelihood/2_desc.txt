@@ -1,0 +1,4 @@
+Light, rhythmic music with a touch of sadness, but evoke positive emotions. Suitable for fast frames of a movie/tv/web/games etc.
+
+Pos score: 0.38
+neg score: 0.24
