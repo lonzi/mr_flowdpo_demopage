@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<!-- saved from url=(0058)https://google-research.github.io/seanet/musiclm/examples/ -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>MR-FlowDPO: Multi-Reward Direct Preference Optimization
+        for Flow-Matching Text-to-Music Generation</title>
+    <link href="./style/bootstrap.min.css" rel="stylesheet">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="./style/jquery.min.js"></script>
+    <script src="./style/helper-v2.js" defer=""></script>
+    <style>
+      td {
+        vertical-align: middle;
+      }
+      th, td {
+        border-bottom: 0.1px solid rgb(167, 167, 167);
+        padding: 8px;
+        text-align: center;
+        width: 33%; /* Equal width for each cell */
+        
+      }
+
+      audio {
+        width: 20vw;
+        min-width: 100px;
+        max-width: 250px;
+      }
+      .timestamp-label {
+        color: gray;
+      }
+      table.wide-audio audio {
+        width: 40vw;
+        max-width: 40vw;
+      }
+      /* .authors {
+        font-size: 0.8em;
+        color: gray;
+      } */
+      .margin-top {
+        margin-top:3px;
+      }
+      
+      .margin-bottom {
+        margin-bottom:3px;
+      }
+
+      body {
+        margin-right: 80px;
+        margin-left: 80px;
+        margin-top: 30px;
+        margin-bottom: 10px;
+      }
+      .center-no-border {
+        text-align: center;
+        border: none;
+      }
+    </style>
+    
+
+    <script>
+      function updateAudio() {
+
+          var sample = document.getElementById("sample").value;
+
+          const categories = ['chroma', 'drums_no_bpf', 'chords',
+                              'ttm'];
+
+          // Update audio for each cell in the table
+          for (var i = 1; i <= 3; i++) {
+              var text_values = document.getElementById("text" + i).value.split('|');
+              var text_idx = text_values[0];
+              var text = text_values[1];
+              
+              document.getElementById("audio_header_" + i).innerText = text
+              
+              // iterate over the three categories - melody, drums, chords
+              categories.forEach(category => {
+                var fileName = "sandbox/" + sample + "/"
+                var audio = document.getElementById("audio_" + i + "_" + category);
+                fileName += category + "_";
+
+                fileName += text_idx + ".wav";
+
+                audio.src = "audio/" + fileName;
+                audio.load();
+                
+              });
+          }
+         
+      }
+    </script>
+  </head>
+  <body>
+    <div id="header" class="container-fluid">
+        <div class="row" style="text-align: center;">
+        <div class="row">
+            <h1>MR-FlowDPO: Multi-Reward Direct Preference Optimization</h1>
+            <h1>for Flow-Matching Text-to-Music Generation</h1>
+            <div class="authors">
+                Anonymous Authors
+            </div>
+            <br>
+        </div>
+    </div>
+    
+    <!--------------------- ABSTRACT ----------------------->
+
+    <div class="container pt-5 mt-5 shadow p-5 mb-5 bg-white rounded">
+        <span>
+            <h2>Abstract</h2>
+            <center><img src="./figures/arch.png" style="width:45%"></center>
+            <br>
+            A key challenge in music generation models is
+            their lack of direct alignment with human preferences, as music evaluation is inherently subjective and varies widely across individuals. 
+            We introduce MR-FlowDPO - a novel approach that enhances flow-matching-based music generation models - 
+            a major class of modern music generative models, using Direct Preference Optimization (DPO) with multiple musical rewards.
+            The musical rewards are crafted to assess music quality
+            across three key dimensions: text alignment, audio production quality, and musicality, utilizing
+            scalable off-the-shelf models for each reward prediction. We employ these rewards in two ways:
+            by constructing preference data for DPO and by
+            integrating the rewards into text prompting. To
+            address the ambiguity in musicality evaluation,
+            we propose a novel scoring mechanism leveraging the semantic self-supervised representation,
+            which significantly improves the rhythmic stability of generated music. We conduct an extensive
+            evaluation using a variety of music-specific objective metrics as well as a human study. Results
+            show that MR-FlowDPO significantly enhances
+            overall music generation quality and is consistently preferred over highly competitive baselines
+            in terms of audio quality, text alignment, and musicality. Our code and models will be open-sourced.
+        </span>
+    </div>
+
+    <!--------------------- MRSD data set - 30s - Musicality ----------------------->
+    <div class="container pt-5 mt-5 shadow p-5 mb-5 bg-white rounded">
+      <h2>MRSD data pairs - Semantic Consistency</h2>
+      <p>Reference model: MelodyFlow-1B </p>
+        
+      <table>
+         
+        <tr>
+            <th id="ll_audio_header_gt"> text prompt ↓ </th>
+            <th id="ll_audio_header_1"> Positive Sample </th>
+            <th id="ll_audio_header_2"> Positive Score </th>
+            <th id="ll_audio_header_3"> Negative Sample</th>
+            <th id="ll_audio_header_4"> Negative Score </th>
+        </tr>
+        <tr>
+            <td style="font-size: 12px;">
+              Hard driving, 90s style alternative rock.
+            </td>
+            <td>
+                <audio controls id="ll_pos_1">
+                    <source src="audio/MRSD_data_pairs/30s/likelihood/1_pos.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+            <td>
+              0.40
+            </td>
+            <td>
+              <audio controls id="ll_neg_1">
+                  <source src="audio/MRSD_data_pairs/30s/likelihood/1_neg.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+            </td>
+            <td>
+              0.21
+            </td>
+        </tr>
+
+        <tr>
+          <td style="font-size: 12px;">
+            Light, rhythmic music with a touch of sadness, but evoke positive emotions. Suitable for fast frames of a movie/tv/web/games etc.
+          </td>
+          <td>
+              <audio controls id="ll_pos_1">
+                  <source src="audio/MRSD_data_pairs/30s/likelihood/2_pos.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+          </td>
+          <td>
+            0.38
+          </td>
+          <td>
+            <audio controls id="ll_neg_1">
+                <source src="audio/MRSD_data_pairs/30s/likelihood/2_neg.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+          </td>
+          <td>
+            0.24
+          </td>
+      </tr>
+  
+    
+        
+
+      </table>
+    </div>
+
+     <!--------------------- MRSD data set - 30s - Aesthetics ----------------------->
+     <div class="container pt-5 mt-5 shadow p-5 mb-5 bg-white rounded">
+      <h2>MRSD data pairs - Production Quality</h2>
+      <p>Reference model: MelodyFlow-1B </p>
+        
+      <table>
+         
+        <tr>
+            <th id="aes_audio_header_gt"> text prompt ↓ </th>
+            <th id="aes_audio_header_1"> Positive Sample </th>
+            <th id="aes_audio_header_2"> Positive Score </th>
+            <th id="aes_audio_header_3"> Negative Sample</th>
+            <th id="aes_audio_header_4"> Negative Score </th>
+        </tr>
+        <tr>
+            <td style="font-size: 12px;">
+              Happy swinging track, finger snaps and bending organ.Perfect for a video tutorial, cooking vlog 
+              or as a soundtrack in your podcast.Funny vibes and light-hearted mood.
+            </td>
+            <td>
+                <audio controls id="aes_pos_1">
+                    <source src="audio/MRSD_data_pairs/30s/aes/1_pos.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+            <td>
+              8.23
+            </td>
+            <td>
+              <audio controls id="aes_neg_1">
+                  <source src="audio/MRSD_data_pairs/30s/aes/1_neg.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+            </td>
+            <td>
+              6.58
+            </td>
+        </tr>
+
+        <tr>
+          <td style="font-size: 12px;">
+            Electronic Music Track for Video Editing or Slide show and Presentationsuseful for Technology, informative, science, Travel and other themes
+          </td>
+          <td>
+              <audio controls id="aes_pos_1">
+                  <source src="audio/MRSD_data_pairs/30s/aes/2_pos.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+          </td>
+          <td>
+            8.49
+          </td>
+          <td>
+            <audio controls id="aes_neg_1">
+                <source src="audio/MRSD_data_pairs/30s/aes/2_neg.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+          </td>
+          <td>
+            6.79
+          </td>
+      </tr>
+      </table>
+    </div>
+
+    <!--------------------- MRSD data set - 30s - CLAP ----------------------->
+    <div class="container pt-5 mt-5 shadow p-5 mb-5 bg-white rounded">
+      <h2>MRSD data pairs - Text Alignment</h2>
+      <p>Reference model: MelodyFlow-1B </p>
+        
+      <table>
+         
+        <tr>
+            <th id="clap_audio_header_gt"> text prompt ↓ </th>
+            <th id="clap_audio_header_1"> Positive Sample </th>
+            <th id="clap_audio_header_2"> Positive Score </th>
+            <th id="clap_audio_header_3"> Negative Sample</th>
+            <th id="clap_audio_header_4"> Negative Score </th>
+        </tr>
+        <tr>
+            <td style="font-size: 12px;">
+              The Power of Synths combined with originality that creates epic atmosphere, going into a battle with strengthened spirit kind of music.
+            </td>
+            <td>
+                <audio controls id="clap_pos_1">
+                    <source src="audio/MRSD_data_pairs/30s/clap/1_pos.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+            <td>
+              0.45
+            </td>
+            <td>
+              <audio controls id="clap_neg_1">
+                  <source src="audio/MRSD_data_pairs/30s/clap/1_neg.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+            </td>
+            <td>
+              0.20
+            </td>
+        </tr>
+
+        <tr>
+          <td style="font-size: 12px;">
+            Calm & dark pop punk inspired sound for all types of podcasts, youtube, action content & more.
+          </td>
+          <td>
+              <audio controls id="clap_pos_2">
+                  <source src="audio/MRSD_data_pairs/30s/clap/2_pos.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+          </td>
+          <td>
+            0.43
+          </td>
+          <td>
+            <audio controls id="clap_neg_2">
+                <source src="audio/MRSD_data_pairs/30s/clap/2_neg.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+          </td>
+          <td>
+            0.17
+          </td>
+      </tr>
+        <tr>
+          <td style="font-size: 12px;">
+            This soundtrack makes a fun, kids, mysterious mood. This is just melody with Halloween mood. Spooky and quirky background instrumental music,
+            full of eerie cartoon atmosphere and creepy Halloween fun. Witches, ghosts, monsters, scarecrows, pumpkins, zombies, vampires.
+            Instruments used: chamber orchestra, harpsichord, theremin, celeste, and percussion set. Perfect for Halloween themes, cartoons, animation, games, kids, children's media, comics, creepy slide shows
+          </td>
+          <td>
+              <audio controls id="clap_pos_3">
+                  <source src="audio/MRSD_data_pairs/30s/clap/3_pos.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+          </td>
+          <td>
+            0.50
+          </td>
+          <td>
+            <audio controls id="clap_neg_3">
+                <source src="audio/MRSD_data_pairs/30s/clap/3_neg.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+          </td>
+          <td>
+            0.25
+          </td>
+      </tr>
+      </table>
+    </div>
+
+
+    <!--------------------- Comparison to Reference Models - 1B ----------------------->
+    <div class="container pt-5 mt-5 shadow p-5 mb-5 bg-white rounded">
+      <h2>MrFlowDPO-1B vs. Reference </h2>
+        
+      <table>
+         
+        <tr>
+            <th id="1B_audio_header_gt"> text prompt ↓ model → </th>
+            <th id="1B_audio_header_1"> MelodyFlow-1B (Reference) </th>
+            <th id="1B_audio_header_2">MRFlowDPO-1B</th>
+        </tr>
+        <tr>
+          <td style="font-size: 12px;">
+            An upbeat, soulful hip hop track with organic production, guitars and percussion.
+          </td>
+          <td>
+              <audio controls id="melodyflow_audio_0">
+                  <source src="audio/1B/0_mf.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+          </td>
+          <td>
+              <audio controls id="mrflow1B_audio_0">
+                  <source src="audio/1B/0_dpo.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+          </td>
+        </tr>
+        <tr>
+            <td style="font-size: 12px;">
+              Hard driving, 90s style alternative rock.
+            </td>
+            <td>
+                <audio controls id="melodyflow_audio_1">
+                    <source src="audio/1B/1_mf.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+            <td>
+                <audio controls id="mrflow1B_audio_1">
+                    <source src="audio/1B/1_dpo.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="font-size: 12px;">
+              A twangy funk tune with a touch of 80s and a break beat finish, drums, bass, guitar and keys.
+            </td>
+            <td>
+                <audio controls id="melodyflow_audio_1">
+                    <source src="audio/1B/2_mf.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+            <td>
+                <audio controls id="mrflow1B_audio_1">
+                    <source src="audio/1B/2_dpo.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="font-size: 12px;">
+                Fusion of World, Indian, Middle Eastern  genre's with Dystonpian bellydance, glitch, pop vibe. Uptempo, very percussion centric with traditional Indian acoustic instruments masterfully blended with synth electronic effects.
+            </td>
+            <td>
+                <audio controls id="melodyflow_audio_1">
+                    <source src="audio/1B/3_mf.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+            <td>
+                <audio controls id="mrflow1B_audio_1">
+                    <source src="audio/1B/3_dpo.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+        </tr>
+
+      </table>
+    </div>
+
+    <!--------------------- Comparison to Reference Models - 400M ----------------------->
+
+    <div class="container pt-5 mt-5 shadow p-5 mb-5 bg-white rounded">
+      <h2>MrFlowDPO-400M vs. Reference </h2>
+        
+      <table>
+         
+        <tr>
+            <th id="1B_audio_header_gt"> text prompt ↓ model → </th>
+            <th id="1B_audio_header_1"> Flow-400M (Reference) </th>
+            <th id="1B_audio_header_2">MRFlowDPO-400M</th>
+        </tr>
+        <tr>
+            <td style="font-size: 12px;">
+              Chill, disco comedic, video game, jolly - electronic programming, jazzy hits. Jazz, soul, dance, house hybrid.
+            </td>
+            <td>
+                <audio controls id="400M_audio_1">
+                    <source src="audio/400M/1_ref.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+            <td>
+                <audio controls id="400M_dpo_audio_1">
+                    <source src="audio/400M/1_dpo.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="font-size: 12px;">
+              60's Inspired Acoustic Pop
+            </td>
+            <td>
+                <audio controls id="400M_audio_2">
+                    <source src="audio/400M/2_ref.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+            <td>
+                <audio controls id="400M_dpo_audio_2">
+                    <source src="audio/400M/2_dpo.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+        </tr>
+
+        <tr>
+          <td style="font-size: 12px;">
+            Philosophical and abstract golden age hip hop track to relieve stress
+          </td>
+          <td>
+              <audio controls id="400M_audio_3">
+                  <source src="audio/400M/3_ref.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+          </td>
+          <td>
+              <audio controls id="400M_dpo_audio_3">
+                  <source src="audio/400M/3_dpo.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="font-size: 12px;">
+              Inspiring indie guitar UK Drill drum style instrumental
+            </td>
+            <td>
+                <audio controls id="400M_audio_4">
+                    <source src="audio/400M/4_ref.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+            <td>
+                <audio controls id="400M_dpo_audio_4">
+                    <source src="audio/400M/4_dpo.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+              </td>
+          </tr>
+
+      </table>
+    </div>
+
+
+
+    <!--------------------- Comparison to Baselines - MusicGen ----------------------->
+
+    <div class="container pt-5 mt-5 shadow p-5 mb-5 bg-white rounded">
+      <h2>MrFlowDPO-400M vs. MusicGen </h2>
+        
+      <table>
+         
+        <tr>
+            <th id="musicgen_audio_header_gt"> text prompt ↓ model → </th>
+            <th id="musicgen_audio_header_1"> MusicGen-Medium </th>
+            <th id="musicgen_audio_header_2"> MRFlowDPO-400M</th>
+        </tr>
+
+        <tr>
+          <td style="font-size: 12px;">
+            This music clip is an percussionary instrument. The tempo is medium fast with steady bass drum, energetic snare drum beat and cymbal rides. This music is a youthful, punchy, energetic, simple drumming style.
+          </td>
+          <td>
+              <audio controls id="400M_audio_0">
+                  <source src="audio/400M_vs_musicgen/0_ref.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+          </td>
+          <td>
+              <audio controls id="400M_dpo_audio_0">
+                  <source src="audio/400M_vs_musicgen/0_dpo.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+          </td>
+      </tr>
+
+        <tr>
+            <td style="font-size: 12px;">
+              This is an opening theme for a TV series. It is an instrumental piece. The main theme is being played by a loud brass section. There is a groovy synth bass line playing. The rhythmic background consists of a strong electronic drum beat. The atmosphere is energetic. This piece could be used in lifting samples for beat-making.
+            </td>
+            <td>
+                <audio controls id="400M_audio_1">
+                    <source src="audio/400M_vs_musicgen/1_ref.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+            <td>
+                <audio controls id="400M_dpo_audio_1">
+                    <source src="audio/400M_vs_musicgen/1_dpo.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="font-size: 12px;">
+              This is an instrumental progressive rock music piece. There is an electric guitar playing complex tunes and chords with a pitch shifting effect. There is a psychedelic feel to this track. Parts of this recording could be used in an advertisement jingle.
+            </td>
+            <td>
+                <audio controls id="400M_audio_2">
+                    <source src="audio/400M_vs_musicgen/2_ref.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+            <td>
+                <audio controls id="400M_dpo_audio_2">
+                    <source src="audio/400M_vs_musicgen/2_dpo.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+        </tr>
+
+      </table>
+    </div>
+
+
+
+    <!--------------------- Comparison to Baselines - AudioLDM2 ----------------------->
+
+    <div class="container pt-5 mt-5 shadow p-5 mb-5 bg-white rounded">
+      <h2>MrFlowDPO-400M vs. AudioLDM2 </h2>
+        
+      <table>
+         
+        <tr>
+            <th id="audioldm2_audio_header_gt"> text prompt ↓ model → </th>
+            <th id="audioldm2_audio_header_1"> AudioLDM2 </th>
+            <th id="audioldm2_audio_header_2"> MRFlowDPO-400M</th>
+        </tr>
+
+        <tr>
+          <td style="font-size: 12px;">
+            This music is instrumental. The tempo is medium fast with a melodious keyboard harmony, steady drumming, groovy bass, synthesiser arrangements , electronically articulated sounds and tambourine beats . The melody is harmonious, pleasant, uncomplicated and well layered. This music is Synth Pop.
+          </td>
+          <td>
+              <audio controls id="400M_audio_0">
+                  <source src="audio/400M_vs_audioldm2/0_ref.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+          </td>
+          <td>
+              <audio controls id="400M_dpo_audio_0">
+                  <source src="audio/400M_vs_audioldm2/0_dpo.wav" type="audio/mpeg">
+                  Your browser does not support the audio element.
+              </audio>
+          </td>
+      </tr>
+
+        <tr>
+            <td style="font-size: 12px;">
+              The performer is snapping his fingers in rhythm with the upbeat japanese music playing in the background. The song is a j-pop song and features vibrant rhythmic synth activity and has a general dance feel to it. It's a live recording.
+            </td>
+            <td>
+                <audio controls id="400M_audio_1">
+                    <source src="audio/400M_vs_audioldm2/1_ref.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+            <td>
+                <audio controls id="400M_dpo_audio_1">
+                    <source src="audio/400M_vs_audioldm2/1_dpo.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="font-size: 12px;">
+              The song is an instrumental. The song is medium tempo with a steady drumming rhythm, cymbals crashing, piano accompaniment and a xylophone playing a cool melody. The song is emotional and passionate. The song is an ad jingle for a technology solutions company.
+            </td>
+            <td>
+                <audio controls id="400M_audio_2">
+                    <source src="audio/400M_vs_audioldm2/2_ref.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+            <td>
+                <audio controls id="400M_dpo_audio_2">
+                    <source src="audio/400M_vs_audioldm2/2_dpo.wav" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </td>
+        </tr>
+
+      </table>
+    </div>
+    
+</body>
+</html>
