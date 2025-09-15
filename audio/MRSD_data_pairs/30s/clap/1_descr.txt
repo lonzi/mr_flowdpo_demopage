@@ -1,0 +1,4 @@
+The Power of Synths combined with originality that creates epic atmosphere, going into a battle with strengthened spirit kind of music.
+
+pos score: 0.4465
+neg score: 0.2009

@@ -1,0 +1,4 @@
+This soundtrack makes a fun, kids, mysterious mood. This is just melody with Halloween mood. Spooky and quirky background instrumental music, full of eerie cartoon atmosphere and creepy Halloween fun. Witches, ghosts, monsters, scarecrows, pumpkins, zombies, vampires. Instruments used: chamber orchestra, harpsichord, theremin, celeste, and percussion set. Perfect for Halloween themes, cartoons, animation, games, kids, children's media, comics, creepy slide shows
+
+pos score: 0.4988
+neg score: 0.2529

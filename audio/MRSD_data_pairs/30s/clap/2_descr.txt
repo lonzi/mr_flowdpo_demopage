@@ -1,0 +1,4 @@
+Calm & dark pop punk inspired sound for all types of podcasts, youtube, action content & more.
+
+pos score: 0.4298
+neg score: 0.1669
